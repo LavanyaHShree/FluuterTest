@@ -1,0 +1,194 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: DynamicFormBuilder(),
+    );
+  }
+}
+
+class DynamicFormBuilder extends StatefulWidget {
+  @override
+  _DynamicFormBuilderState createState() => _DynamicFormBuilderState();
+}
+
+class _DynamicFormBuilderState extends State<DynamicFormBuilder> {
+  // List of form fields
+  List<FormFieldModel> fields = [];
+
+  // Method to add a new field to the form
+  void addField(FormFieldType type) {
+    setState(() {
+      fields.add(FormFieldModel(type: type, id: UniqueKey()));
+    });
+  }
+
+  // Method to remove a field by its index
+  void removeField(int index) {
+    setState(() {
+      fields.removeAt(index);
+    });
+  }
+
+  // Method to reorder fields
+  void reorderFields(int oldIndex, int newIndex) {
+    setState(() {
+      final item = fields.removeAt(oldIndex);
+      fields.insert(newIndex, item);
+    });
+  }
+
+  // Method to handle date picker
+  Future<void> _pickDate(FormFieldModel field) async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (pickedDate != null) {
+      // You can store the selected date or do something with it
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Dynamic Form Builder'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            // Buttons to add different types of fields
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildFieldButton(FormFieldType.text, 'Text Field', Colors.pink),
+                _buildFieldButton(FormFieldType.number, 'Number Field', Colors.green),
+                _buildFieldButton(FormFieldType.select, 'Select Field', Colors.orange),
+                _buildFieldButton(FormFieldType.checkbox, 'Checkbox', Colors.blue),
+                _buildFieldButton(FormFieldType.email, 'Email Field', Colors.purple),
+                _buildFieldButton(FormFieldType.date, 'Date Field', Colors.teal),
+                _buildFieldButton(FormFieldType.slider, 'Slider Field', Colors.cyan),
+              ],
+            ),
+            SizedBox(height: 20),
+            // ListView to display form fields
+            Expanded(
+              child: ReorderableListView(
+                onReorder: reorderFields,
+                children: fields
+                    .asMap()
+                    .entries
+                    .map((entry) {
+                  final index = entry.key;
+                  final field = entry.value;
+                  return ListTile(
+                    key: field.id,
+                    title: field.getWidget(_pickDate),
+                    tileColor: Colors.lightBlueAccent,
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () => removeField(index),
+                    ),
+                  );
+                })
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ElevatedButton _buildFieldButton(FormFieldType type, String label, Color color) {
+    return ElevatedButton(
+      onPressed: () => addField(type),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color, // button color
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: Colors.white),
+      ),
+    );
+  }
+}
+
+enum FormFieldType { text, number, select, checkbox, email, date, slider }
+
+class FormFieldModel {
+  final FormFieldType type;
+  final Key id;
+
+  FormFieldModel({required this.type, required this.id});
+
+  // Function to return the correct widget based on the field type
+  Widget getWidget(Future<void> Function(FormFieldModel) pickDate) {
+    switch (type) {
+      case FormFieldType.text:
+        return TextField(
+          decoration: InputDecoration(labelText: 'Text Field'),
+        );
+      case FormFieldType.number:
+        return TextField(
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: 'Number Field'),
+        );
+      case FormFieldType.select:
+        return DropdownButtonFormField<String>(
+          decoration: InputDecoration(labelText: 'Select Field'),
+          items: [
+            DropdownMenuItem(value: 'Option 1', child: Text('Option 1')),
+            DropdownMenuItem(value: 'Option 2', child: Text('Option 2')),
+            DropdownMenuItem(value: 'Option 3', child: Text('Option 3')),
+          ],
+          onChanged: (value) {},
+        );
+      case FormFieldType.checkbox:
+        return CheckboxListTile(
+          title: Text('Checkbox Field'),
+          value: false,
+          onChanged: (bool? newValue) {},
+        );
+      case FormFieldType.email:
+        return TextField(
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(labelText: 'Email Field'),
+        );
+      case FormFieldType.date:
+        return TextField(
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: 'Date Field',
+            hintText: 'Select a date',
+            suffixIcon: Icon(Icons.calendar_today),
+          ),
+          onTap: () => pickDate(this),  // Call the pickDate method
+        );
+      case FormFieldType.slider:
+        return Slider(
+          value: 0.5,
+          min: 0,
+          max: 1,
+          divisions: 10,
+          onChanged: (double value) {},
+        );
+      default:
+        return SizedBox();
+    }
+  }
+} 
